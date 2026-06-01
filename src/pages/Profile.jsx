@@ -2,8 +2,30 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 
+const validateForm = (data) => {
+    const errors = {};
+
+    if (data.phone && !/^\+?[0-9\s\-()]{7,20}$/.test(data.phone)) {
+        errors.phone = 'Введите корректный номер телефона (только цифры, +, пробелы, скобки, дефис)';
+    }
+
+    if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+        errors.email = 'Введите корректный email адрес';
+    }
+
+    if (data.first_name && /\d/.test(data.first_name)) {
+        errors.first_name = 'Имя не должно содержать цифры';
+    }
+
+    if (data.last_name && /\d/.test(data.last_name)) {
+        errors.last_name = 'Фамилия не должна содержать цифры';
+    }
+
+    return errors;
+};
+
 const Profile = () => {
-    const { user } = useAuth();
+    const { user, refreshUser } = useAuth();
     const [formData, setFormData] = useState({
         first_name: user?.first_name || '',
         last_name: user?.last_name || '',
@@ -13,23 +35,61 @@ const Profile = () => {
     });
     const [message, setMessage] = useState('');
     const [messageType, setMessageType] = useState('success');
+    const [fieldErrors, setFieldErrors] = useState({});
     const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setFormData({ ...formData, [name]: value });
+        // убираем ошибку поля при вводе
+        if (fieldErrors[name]) {
+            setFieldErrors({ ...fieldErrors, [name]: '' });
+        }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setMessage('');
+
+        // клиентская валидация
+        const errors = validateForm(formData);
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors);
+            return;
+        }
+
         setLoading(true);
         try {
             await api.patch('/auth/profile/', formData);
+            await refreshUser();
+            setFieldErrors({});
             setMessageType('success');
             setMessage('Профиль успешно обновлён!');
-        } catch {
-            setMessageType('error');
-            setMessage('Ошибка при обновлении профиля.');
+        } catch (err) {
+            // серверные ошибки по полям
+            const data = err.response?.data;
+            if (data && typeof data === 'object') {
+                const serverErrors = {};
+                const generalErrors = [];
+                Object.entries(data).forEach(([key, val]) => {
+                    const msg = Array.isArray(val) ? val.join(' ') : val;
+                    if (['first_name', 'last_name', 'email', 'phone', 'bio'].includes(key)) {
+                        serverErrors[key] = msg;
+                    } else {
+                        generalErrors.push(msg);
+                    }
+                });
+                if (Object.keys(serverErrors).length > 0) {
+                    setFieldErrors(serverErrors);
+                }
+                if (generalErrors.length > 0) {
+                    setMessageType('error');
+                    setMessage(generalErrors.join(' '));
+                }
+            } else {
+                setMessageType('error');
+                setMessage('Ошибка при обновлении профиля. Попробуйте снова.');
+            }
         } finally {
             setLoading(false);
         }
@@ -67,46 +127,70 @@ const Profile = () => {
                             <div style={styles.field}>
                                 <label style={styles.label}>Имя</label>
                                 <input
-                                    style={styles.input}
+                                    style={{
+                                        ...styles.input,
+                                        ...(fieldErrors.first_name ? styles.inputError : {}),
+                                    }}
                                     type="text"
                                     name="first_name"
                                     value={formData.first_name}
                                     onChange={handleChange}
                                     placeholder="Иван"
                                 />
+                                {fieldErrors.first_name && (
+                                    <span style={styles.fieldError}>{fieldErrors.first_name}</span>
+                                )}
                             </div>
                             <div style={styles.field}>
                                 <label style={styles.label}>Фамилия</label>
                                 <input
-                                    style={styles.input}
+                                    style={{
+                                        ...styles.input,
+                                        ...(fieldErrors.last_name ? styles.inputError : {}),
+                                    }}
                                     type="text"
                                     name="last_name"
                                     value={formData.last_name}
                                     onChange={handleChange}
                                     placeholder="Иванов"
                                 />
+                                {fieldErrors.last_name && (
+                                    <span style={styles.fieldError}>{fieldErrors.last_name}</span>
+                                )}
                             </div>
                         </div>
                         <div style={styles.field}>
                             <label style={styles.label}>Email</label>
                             <input
-                                style={styles.input}
+                                style={{
+                                    ...styles.input,
+                                    ...(fieldErrors.email ? styles.inputError : {}),
+                                }}
                                 type="email"
                                 name="email"
                                 value={formData.email}
                                 onChange={handleChange}
                             />
+                            {fieldErrors.email && (
+                                <span style={styles.fieldError}>{fieldErrors.email}</span>
+                            )}
                         </div>
                         <div style={styles.field}>
                             <label style={styles.label}>Телефон</label>
                             <input
-                                style={styles.input}
+                                style={{
+                                    ...styles.input,
+                                    ...(fieldErrors.phone ? styles.inputError : {}),
+                                }}
                                 type="text"
                                 name="phone"
                                 value={formData.phone}
                                 onChange={handleChange}
                                 placeholder="+7 999 000 00 00"
                             />
+                            {fieldErrors.phone && (
+                                <span style={styles.fieldError}>{fieldErrors.phone}</span>
+                            )}
                         </div>
                         <div style={styles.field}>
                             <label style={styles.label}>О себе</label>
@@ -211,6 +295,15 @@ const styles = {
         fontSize: '15px',
         boxSizing: 'border-box',
         outline: 'none',
+    },
+    inputError: {
+        borderColor: '#e94560',
+    },
+    fieldError: {
+        display: 'block',
+        color: '#e94560',
+        fontSize: '12px',
+        marginTop: '5px',
     },
     button: {
         width: '100%',

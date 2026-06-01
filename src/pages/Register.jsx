@@ -11,31 +11,68 @@ const Register = () => {
         password: '',
         password2: '',
     });
-    const [error, setError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState({});
+    const [generalError, setGeneralError] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setFormData({ ...formData, [name]: value });
+        if (fieldErrors[name]) {
+            setFieldErrors({ ...fieldErrors, [name]: '' });
+        }
+    };
+
+    const validate = () => {
+        const errors = {};
+        if (formData.username.length < 3) {
+            errors.username = 'Имя пользователя должно содержать минимум 3 символа';
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+            errors.email = 'Введите корректный email адрес';
+        }
+        if (formData.password.length < 8) {
+            errors.password = 'Пароль должен содержать минимум 8 символов';
+        }
+        if (formData.password !== formData.password2) {
+            errors.password2 = 'Пароли не совпадают';
+        }
+        return errors;
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
-        if (formData.password !== formData.password2) {
-            setError('Пароли не совпадают.');
+        setGeneralError('');
+
+        const errors = validate();
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors);
             return;
         }
+
         setLoading(true);
         try {
             await register(formData.username, formData.email, formData.password, formData.password2);
             navigate('/login');
         } catch (err) {
             const data = err.response?.data;
-            if (data) {
-                const messages = Object.values(data).flat().join(' ');
-                setError(messages);
+            if (data && typeof data === 'object') {
+                const serverErrors = {};
+                const general = [];
+                Object.entries(data).forEach(([key, val]) => {
+                    const msg = Array.isArray(val) ? val.join(' ') : val;
+                    if (['username', 'email', 'password', 'password2'].includes(key)) {
+                        serverErrors[key] = msg;
+                    } else {
+                        general.push(msg);
+                    }
+                });
+                setFieldErrors(serverErrors);
+                if (general.length > 0) {
+                    setGeneralError(general.join(' '));
+                }
             } else {
-                setError('Ошибка регистрации.');
+                setGeneralError('Ошибка регистрации. Попробуйте снова.');
             }
         } finally {
             setLoading(false);
@@ -51,56 +88,64 @@ const Register = () => {
                     <p style={styles.subtitle}>Заполните форму для регистрации</p>
                 </div>
 
-                {error && <div style={styles.error}>{error}</div>}
+                {generalError && <div style={styles.error}>{generalError}</div>}
 
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} noValidate>
                     <div style={styles.field}>
                         <label style={styles.label}>Имя пользователя</label>
                         <input
-                            style={styles.input}
+                            style={{ ...styles.input, ...(fieldErrors.username ? styles.inputError : {}) }}
                             type="text"
                             name="username"
                             value={formData.username}
                             onChange={handleChange}
                             placeholder="username"
-                            required
                         />
+                        {fieldErrors.username && (
+                            <span style={styles.fieldError}>{fieldErrors.username}</span>
+                        )}
                     </div>
                     <div style={styles.field}>
                         <label style={styles.label}>Email</label>
                         <input
-                            style={styles.input}
+                            style={{ ...styles.input, ...(fieldErrors.email ? styles.inputError : {}) }}
                             type="email"
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
                             placeholder="example@mail.ru"
-                            required
                         />
+                        {fieldErrors.email && (
+                            <span style={styles.fieldError}>{fieldErrors.email}</span>
+                        )}
                     </div>
                     <div style={styles.field}>
                         <label style={styles.label}>Пароль</label>
                         <input
-                            style={styles.input}
+                            style={{ ...styles.input, ...(fieldErrors.password ? styles.inputError : {}) }}
                             type="password"
                             name="password"
                             value={formData.password}
                             onChange={handleChange}
                             placeholder="••••••••"
-                            required
                         />
+                        {fieldErrors.password && (
+                            <span style={styles.fieldError}>{fieldErrors.password}</span>
+                        )}
                     </div>
                     <div style={styles.field}>
                         <label style={styles.label}>Подтверждение пароля</label>
                         <input
-                            style={styles.input}
+                            style={{ ...styles.input, ...(fieldErrors.password2 ? styles.inputError : {}) }}
                             type="password"
                             name="password2"
                             value={formData.password2}
                             onChange={handleChange}
                             placeholder="••••••••"
-                            required
                         />
+                        {fieldErrors.password2 && (
+                            <span style={styles.fieldError}>{fieldErrors.password2}</span>
+                        )}
                     </div>
                     <button style={styles.button} type="submit" disabled={loading}>
                         {loading ? 'Регистрация...' : 'Зарегистрироваться'}
@@ -183,6 +228,15 @@ const styles = {
         fontSize: '15px',
         boxSizing: 'border-box',
         outline: 'none',
+    },
+    inputError: {
+        borderColor: '#e94560',
+    },
+    fieldError: {
+        display: 'block',
+        color: '#e94560',
+        fontSize: '12px',
+        marginTop: '5px',
     },
     button: {
         width: '100%',
