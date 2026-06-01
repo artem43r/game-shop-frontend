@@ -10,6 +10,7 @@ const Home = () => {
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState('');
+    const [messageType, setMessageType] = useState('error');
 
     useEffect(() => {
         fetchCategories();
@@ -43,166 +44,241 @@ const Home = () => {
         }
     };
 
+    const showMessage = (text, type = 'error') => {
+        setMessage(text);
+        setMessageType(type);
+        setTimeout(() => setMessage(''), 3000);
+    };
+
     const addToCart = async (productId) => {
         if (!user) {
-            setMessage('Войдите в аккаунт чтобы добавить товар в корзину.');
-            setTimeout(() => setMessage(''), 3000);
+            showMessage('Войдите в аккаунт чтобы добавить товар в корзину.');
             return;
         }
         try {
             await api.post('/cart/', { product_id: productId, quantity: 1 });
-            setMessage('Товар добавлен в корзину!');
-            setTimeout(() => setMessage(''), 3000);
+            showMessage('Товар добавлен в корзину!', 'success');
         } catch {
-            setMessage('Ошибка при добавлении в корзину.');
-            setTimeout(() => setMessage(''), 3000);
+            showMessage('Ошибка при добавлении в корзину.');
         }
     };
 
     return (
-        <div style={styles.container}>
-            <h1 style={styles.title}>Игровая валюта</h1>
+        <div style={styles.page}>
+            <div style={styles.container}>
 
-            {message && <div style={styles.message}>{message}</div>}
-
-            <div style={styles.filters}>
-                <input
-                    style={styles.search}
-                    type="text"
-                    placeholder="Поиск товаров..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                />
-                <select
-                    style={styles.select}
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                >
-                    <option value="">Все категории</option>
-                    {categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                </select>
-            </div>
-
-            {loading ? (
-                <div style={styles.loading}>Загрузка...</div>
-            ) : products.length === 0 ? (
-                <div style={styles.loading}>Товары не найдены.</div>
-            ) : (
-                <div style={styles.grid}>
-                    {products.map((product) => (
-                        <div key={product.id} style={styles.card}>
-                            <div style={styles.category}>{product.category_name}</div>
-                            <h3 style={styles.productTitle}>{product.title}</h3>
-                            <div style={styles.currency}>
-                                💰 {product.currency_amount} валюты
-                            </div>
-                            <div style={styles.price}>{product.price} ₽</div>
-                            <button
-                                style={styles.button}
-                                onClick={() => addToCart(product.id)}
-                            >
-                                В корзину
-                            </button>
-                        </div>
-                    ))}
+                <div style={styles.header}>
+                    <h1 style={styles.title}>Игровая валюта</h1>
+                    <p style={styles.subtitle}>Пополняй баланс в любимых играх быстро и выгодно</p>
                 </div>
-            )}
+
+                {message && (
+                    <div style={{
+                        ...styles.message,
+                        backgroundColor: messageType === 'success' ? '#4caf5015' : '#e9456015',
+                        color: messageType === 'success' ? '#4caf50' : '#e94560',
+                        borderColor: messageType === 'success' ? '#4caf5040' : '#e9456040',
+                    }}>
+                        {message}
+                    </div>
+                )}
+
+                <div style={styles.filters}>
+                    <input
+                        style={styles.search}
+                        type="text"
+                        placeholder="🔍  Поиск товаров..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                    <div style={styles.categoryList}>
+                        <button
+                            style={{
+                                ...styles.categoryBtn,
+                                ...(selectedCategory === '' ? styles.categoryBtnActive : {}),
+                            }}
+                            onClick={() => setSelectedCategory('')}
+                        >
+                            Все
+                        </button>
+                        {categories.map((cat) => (
+                            <button
+                                key={cat.id}
+                                style={{
+                                    ...styles.categoryBtn,
+                                    ...(selectedCategory === String(cat.id) ? styles.categoryBtnActive : {}),
+                                }}
+                                onClick={() => setSelectedCategory(String(cat.id))}
+                            >
+                                {cat.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {loading ? (
+                    <div style={styles.empty}>Загрузка...</div>
+                ) : products.length === 0 ? (
+                    <div style={styles.empty}>Товары не найдены.</div>
+                ) : (
+                    <div style={styles.grid}>
+                        {products.map((product) => (
+                            <div key={product.id} style={styles.card}>
+                                <div style={styles.cardTop}>
+                                    <span style={styles.categoryTag}>{product.category_name}</span>
+                                    <span style={styles.currencyBadge}>💰 {product.currency_amount}</span>
+                                </div>
+                                <h3 style={styles.productTitle}>{product.title}</h3>
+                                <div style={styles.cardBottom}>
+                                    <span style={styles.price}>{product.price} ₽</span>
+                                    <button
+                                        style={styles.addBtn}
+                                        onClick={() => addToCart(product.id)}
+                                    >
+                                        В корзину
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
 
 const styles = {
+    page: {
+        backgroundColor: '#0d0d0d',
+        minHeight: 'calc(100vh - 64px)',
+    },
     container: {
-        maxWidth: '1200px',
+        maxWidth: '1400px',
         margin: '0 auto',
-        padding: '2rem',
-        backgroundColor: '#0f0f1a',
-        minHeight: 'calc(100vh - 60px)',
+        padding: '2.5rem 2rem',
+    },
+    header: {
+        marginBottom: '2rem',
     },
     title: {
+        fontSize: '32px',
+        fontWeight: '700',
         color: '#fff',
-        marginBottom: '1.5rem',
+        marginBottom: '8px',
+    },
+    subtitle: {
+        color: '#666',
+        fontSize: '16px',
     },
     message: {
-        backgroundColor: '#e9456020',
-        color: '#e94560',
-        padding: '10px',
-        borderRadius: '4px',
-        marginBottom: '1rem',
+        padding: '12px 16px',
+        borderRadius: '8px',
+        border: '1px solid',
+        marginBottom: '1.5rem',
         fontSize: '14px',
     },
     filters: {
-        display: 'flex',
-        gap: '1rem',
         marginBottom: '2rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1rem',
     },
     search: {
-        flex: 1,
-        padding: '10px',
-        borderRadius: '4px',
-        border: '1px solid #333',
-        backgroundColor: '#1a1a2e',
+        width: '100%',
+        padding: '12px 16px',
+        borderRadius: '8px',
+        border: '1px solid #222',
+        backgroundColor: '#111',
         color: '#fff',
         fontSize: '15px',
+        outline: 'none',
+        boxSizing: 'border-box',
     },
-    select: {
-        padding: '10px',
-        borderRadius: '4px',
-        border: '1px solid #333',
-        backgroundColor: '#1a1a2e',
+    categoryList: {
+        display: 'flex',
+        gap: '8px',
+        flexWrap: 'wrap',
+    },
+    categoryBtn: {
+        padding: '7px 16px',
+        borderRadius: '20px',
+        border: '1px solid #222',
+        backgroundColor: 'transparent',
+        color: '#888',
+        fontSize: '13px',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+    },
+    categoryBtnActive: {
+        backgroundColor: '#e94560',
+        borderColor: '#e94560',
         color: '#fff',
-        fontSize: '15px',
-        minWidth: '180px',
     },
     grid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-        gap: '1.5rem',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+        gap: '1.25rem',
     },
     card: {
-        backgroundColor: '#1a1a2e',
-        borderRadius: '8px',
+        backgroundColor: '#111',
+        border: '1px solid #1e1e1e',
+        borderRadius: '12px',
         padding: '1.5rem',
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.75rem',
+        gap: '1rem',
+        transition: 'border-color 0.2s',
     },
-    category: {
+    cardTop: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    categoryTag: {
         color: '#e94560',
         fontSize: '12px',
+        fontWeight: '500',
         textTransform: 'uppercase',
-        letterSpacing: '1px',
+        letterSpacing: '0.5px',
+    },
+    currencyBadge: {
+        backgroundColor: '#1e1e1e',
+        color: '#888',
+        fontSize: '12px',
+        padding: '3px 10px',
+        borderRadius: '20px',
     },
     productTitle: {
         color: '#fff',
-        margin: 0,
-        fontSize: '16px',
+        fontSize: '17px',
+        fontWeight: '600',
+        flex: 1,
     },
-    currency: {
-        color: '#aaa',
-        fontSize: '14px',
+    cardBottom: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 'auto',
     },
     price: {
         color: '#fff',
         fontSize: '22px',
-        fontWeight: 'bold',
+        fontWeight: '700',
     },
-    button: {
-        padding: '10px',
+    addBtn: {
         backgroundColor: '#e94560',
         color: '#fff',
         border: 'none',
-        borderRadius: '4px',
-        fontSize: '15px',
+        borderRadius: '8px',
+        padding: '9px 18px',
+        fontSize: '14px',
+        fontWeight: '500',
         cursor: 'pointer',
-        marginTop: 'auto',
     },
-    loading: {
-        color: '#aaa',
+    empty: {
+        color: '#555',
         textAlign: 'center',
-        marginTop: '3rem',
+        marginTop: '4rem',
         fontSize: '16px',
     },
 };
