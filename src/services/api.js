@@ -9,7 +9,6 @@ const api = axios.create({
     },
 });
 
-// Перехватчик запросов — добавляет access токен в заголовок
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('access_token');
@@ -21,11 +20,18 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Перехватчик ответов — обновляет access токен если истёк
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
+
+        // не перехватываем ошибки логина и регистрации
+        if (
+            originalRequest.url.includes('/auth/login/') ||
+            originalRequest.url.includes('/auth/register/')
+        ) {
+            return Promise.reject(error);
+        }
 
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;

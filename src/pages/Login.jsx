@@ -15,7 +15,12 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
+
+        if (!formData.username.trim() || !formData.password.trim()) {
+            setError('Заполните все поля.');
+            return;
+        }
+
         setLoading(true);
         try {
             await login(formData.username, formData.password);
@@ -38,7 +43,7 @@ const Login = () => {
 
                 {error && <div style={styles.error}>{error}</div>}
 
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} noValidate>
                     <div style={styles.field}>
                         <label style={styles.label}>Имя пользователя</label>
                         <input
@@ -48,7 +53,6 @@ const Login = () => {
                             value={formData.username}
                             onChange={handleChange}
                             placeholder="username"
-                            required
                         />
                     </div>
                     <div style={styles.field}>
@@ -60,7 +64,6 @@ const Login = () => {
                             value={formData.password}
                             onChange={handleChange}
                             placeholder="••••••••"
-                            required
                         />
                     </div>
                     <button style={styles.button} type="submit" disabled={loading}>
