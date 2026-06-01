@@ -50,9 +50,11 @@ const styles = {
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100vh',
+        backgroundColor: '#0d0d0d',
     },
     main: {
         flex: 1,
+        backgroundColor: '#0d0d0d',
     },
 };
 

@@ -150,7 +150,7 @@ const Home = () => {
 const styles = {
     page: {
         backgroundColor: '#0d0d0d',
-        minHeight: 'calc(100vh - 64px)',
+        flex: 1,
     },
     container: {
         maxWidth: '1400px',

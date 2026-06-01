@@ -166,11 +166,11 @@ const Register = () => {
 const styles = {
     page: {
         backgroundColor: '#0d0d0d',
-        minHeight: 'calc(100vh - 64px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '2rem',
+        flex: 1,
     },
     card: {
         backgroundColor: '#111',
