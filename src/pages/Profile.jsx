@@ -5,8 +5,19 @@ import api from '../services/api';
 const validateForm = (data) => {
     const errors = {};
 
-    if (data.phone && !/^\+?[0-9\s\-()]{7,20}$/.test(data.phone)) {
-        errors.phone = 'Введите корректный номер телефона (только цифры, +, пробелы, скобки, дефис)';
+    if (data.phone) {
+        // разрешённые символы: цифры, +, пробел, скобки, дефис
+        if (!/^[\d\s+()-]+$/.test(data.phone)) {
+            errors.phone = 'Номер может содержать только цифры, +, пробелы, скобки и дефис';
+        } else {
+            // убираем все кроме цифр
+            const digits = data.phone.replace(/\D/g, '');
+            // нормализуем: 8XXXXXXXXXX -> 7XXXXXXXXXX
+            const normalized = digits.startsWith('8') ? '7' + digits.slice(1) : digits;
+            if (normalized.length !== 11 || !normalized.startsWith('7')) {
+                errors.phone = 'Введите номер в формате +7 999 000 00 00 или 8 999 000 00 00';
+            }
+        }
     }
 
     if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
