@@ -1,34 +1,24 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import { validatePhone, validateEmail, validateName } from '../utils/validation';
 
 const validateForm = (data) => {
     const errors = {};
 
-    if (data.phone) {
-        // разрешённые символы: цифры, +, пробел, скобки, дефис
-        if (!/^[\d\s+()-]+$/.test(data.phone)) {
-            errors.phone = 'Номер может содержать только цифры, +, пробелы, скобки и дефис';
-        } else {
-            // убираем все кроме цифр
-            const digits = data.phone.replace(/\D/g, '');
-            // нормализуем: 8XXXXXXXXXX -> 7XXXXXXXXXX
-            const normalized = digits.startsWith('8') ? '7' + digits.slice(1) : digits;
-            if (normalized.length !== 11 || !normalized.startsWith('7')) {
-                errors.phone = 'Введите номер в формате +7 999 000 00 00 или 8 999 000 00 00';
-            }
-        }
+    if (data.phone && !validatePhone(data.phone)) {
+        errors.phone = 'Введите номер в формате +7 999 000 00 00 или 8 999 000 00 00';
     }
 
-    if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+    if (data.email && !validateEmail(data.email)) {
         errors.email = 'Введите корректный email адрес';
     }
 
-    if (data.first_name && /\d/.test(data.first_name)) {
+    if (!validateName(data.first_name)) {
         errors.first_name = 'Имя не должно содержать цифры';
     }
 
-    if (data.last_name && /\d/.test(data.last_name)) {
+    if (!validateName(data.last_name)) {
         errors.last_name = 'Фамилия не должна содержать цифры';
     }
 
